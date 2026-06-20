@@ -3,4 +3,5 @@ node_modules/
 *.log
 
 # 忽略 API Key 配置（包含敏感信息）
-data/KEY/
+data/KEY/*
+!data/KEY/*.example
