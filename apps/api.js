@@ -1,6 +1,7 @@
 /**
  * MATOOL-Plugin - API 请求模块
  */
+import https from 'https'
 import { Cfg } from '../components/index.js'
 
 export function getApiBase() {
@@ -71,16 +72,52 @@ export async function getUserInfo(apiKey) {
 }
 
 /**
- * Import gacha records via URL - sends URL to server's /api/fetch endpoint
- * which handles authkey extraction, Mihoyo proxy, and DB import server-side.
+ * Direct fetch bypassing CDN - connects to origin server IP directly
+ * with proper Host header for virtual hosting support.
+ */
+const ORIGIN_IP = '198.44.177.135'
+
+function fetchOrigin(urlStr, options = {}) {
+  const u = new URL(urlStr)
+  return new Promise((resolve, reject) => {
+    const reqOpts = {
+      hostname: ORIGIN_IP,
+      port: 443,
+      path: u.pathname + u.search,
+      method: options.method || 'GET',
+      headers: {
+        Host: u.hostname,
+        ...options.headers,
+      },
+      servername: u.hostname,
+      rejectUnauthorized: false,
+    }
+    const req = https.request(reqOpts, (res) => {
+      let data = ''
+      res.on('data', c => (data += c))
+      res.on('end', () => {
+        try {
+          resolve({ ok: res.statusCode < 400, statusCode: res.statusCode, json: () => JSON.parse(data) })
+        } catch (e) {
+          reject(new Error('响应解析失败: ' + data.slice(0, 100)))
+        }
+      })
+    })
+    req.on('error', reject)
+    if (options.timeout) {
+      req.setTimeout(options.timeout, () => { req.destroy(); reject(new Error('连接超时')) })
+    }
+    if (options.body) req.write(options.body)
+    req.end()
+  })
+}
+
+/**
+ * Import gacha records via URL - sends URL to server's /api/gacha/import-link endpoint.
+ * Uses direct origin connection to bypass CDN timeout issues.
  *
  * @param {string} gachaUrl - The full gacha URL (hoyolab/mihoyo authkey URL)
  * @returns {{ code: number, message: string, data?: { game: string, uid: string, imported: number } }}
- *
- * Server error codes:
- *   400 - 链接格式不正确 / 缺少参数
- *   401 - API Key 无效
- *   502 - 数据拉取失败（authkey 过期等）
  */
 export async function importGacha(gachaUrl) {
   const apiKey = getAuthKey()
@@ -91,9 +128,9 @@ export async function importGacha(gachaUrl) {
   const base = getApiBase()
   try {
     const url = base + '/gacha/import-link'
-    const resp = await globalThis.fetch(url, {
+    const resp = await fetchOrigin(url, {
       method: 'POST',
-      signal: AbortSignal.timeout(120000),
+      timeout: 150000,
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'MATOOL-Plugin/Yunzai',
