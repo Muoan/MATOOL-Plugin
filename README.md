@@ -2,19 +2,21 @@
 
 墨安游戏助手 - 原神/星穹铁道/绝区零 抽卡统计分析
 
+![ljhx2.png](https://raw.gitcode.com/user-images/assets/5424764/be7eaf0c-76b9-40dc-9e5f-dc47ebfadb8b/ljhx2.png 'ljhx2.png')
+****
+## 😍插件介绍：
+提供基于 [record.muoan.com](https://record.muoan.com) API 的抽卡统计分析功能。
+含抽卡统计、深度分析、五星出货列表、命座统计、卡池分组、保底分布、水位监控等功能，采用蓝白配色清晰易读。
+
+**本插件功能优先级可能高于您使用的插件，遇到问题请拉黑功能或删除本插件**
+
+**本插件拒绝任何【非合理】提议~如遇到问题请卸载本插件或截图＋文字叙述提交issues或加入QQ群或Yunzai论坛反馈即可~**
+
+**如您要参与项目请Pull提交欢迎共同参与此项目！**
+
 ****
 
-## 😍插件介绍
-
-基于 [record.muoan.com](https://record.muoan.com) API 的抽卡数据查询与分析插件。
-提供抽卡统计、深度分析、五星出货列表、命座统计、卡池分组、保底分布、水位监控等功能。
-
-颜色使用蓝白配色清爽易读，支持多游戏符号区分。
-
-****
-
-## 😒安装插件
-
+## 😒安装插件：
 <details>
   <summary>展开/收起</summary>
 
@@ -24,11 +26,15 @@
 git clone --depth=1 https://github.com/Muoan/MATOOL-Plugin.git ./plugins/MATOOL-Plugin/
 ```
 
+****
+
 **Gitee：**
 
 ```bash
 git clone --depth=1 https://gitee.com/muoan/MATOOL-Plugin.git ./plugins/MATOOL-Plugin/
 ```
+
+****
 
 **GitCode：**
 
@@ -40,8 +46,7 @@ git clone --depth=1 https://gitcode.com/muoan/MATOOL-Plugin.git ./plugins/MATOOL
 
 ****
 
-## 😁安装依赖
-
+## 😁安装依赖：
 ```bash
 pnpm i
 pnpm install --filter=MATOOL-Plugin
@@ -50,20 +55,22 @@ pnpm install --filter=MATOOL-Plugin
 ****
 
 ## 😘功能介绍
-
 <details>
 <summary>展开/收起</summary>
 
-| 命令 | 说明 |
-| --- | --- |
-| `#帮助` | 查看本帮助 |
-| `#版本` | 查看版本号与更新日志 |
-| `#总结[uid]` | 原神抽卡统计总览 |
-| `#分析[uid]` | 原神抽卡深度分析 |
-| `#五星[uid]` | 原神五星出货列表 |
-| `#抽卡[uid]` | 原神文字版抽卡记录 |
-| `*总结[uid]` | 星铁抽卡统计（可换 `*分析` `*五星` `*抽卡`） |
-| `%总结[uid]` | 绝区零抽卡统计（可换 `%分析` `%五星` `%抽卡`） |
+| 功能名称 | 功能命令 | 功能讲解 |
+| --- | --- | --- |
+| 帮助 | `#墨安帮助` | 查看本帮助 |
+| 版本 | `#墨安版本` | 查看版本号与更新日志 |
+| 抽卡统计 | `#总结[uid]` | 原神抽卡统计总览（换`*`为星铁，`%`为绝区零） |
+| 抽卡分析 | `#分析[uid]` | 原神抽卡深度分析 |
+| 五星列表 | `#五星[uid]` | 原神五星出货列表 |
+| 抽卡记录 | `#抽卡[uid]` | 原神文字版抽卡记录 |
+| 绑定Key | `#墨安绑定 [api_key]` | 绑定 API Key |
+| 信息查询 | `#墨安信息` | 查看 API Key 配额余额 |
+| 解绑 | `#墨安解绑` | 清除 API Key |
+| 插件更新 | `#墨安更新` | 拉取插件更新 |
+| URL导入 | 发送抽卡链接 | 自动导入抽卡记录至服务器 |
 
 > **游戏符号：** `#` 原神、`*` 星穹铁道、`%` 绝区零
 
@@ -71,24 +78,40 @@ pnpm install --filter=MATOOL-Plugin
 
 ****
 
-## 🔧账号设置（仅主人）
+## 😂更新：
+**对着机器人发#墨安更新 或 在目录执行git pull**
 
-| 命令 | 说明 |
-| --- | --- |
-| `#墨安绑定 [api_key]` | 绑定 API Key |
-| `#墨安信息` | 查看 Key 配额余额 |
-| `#墨安解绑` | 清除 API Key |
-| `#墨安更新` | 拉取插件更新 |
+**PS：遇到无法更新或错误提示可使用#墨安强制更新**
 
 ****
 
-## 🤝相关项目
+## 😜交流：
+**QQ群：[872488071](https://qm.qq.com/q/SA5dEJf6MM)**
 
-- [record.muoan.com](https://record.muoan.com) - 墨安游戏数据 API
-- [Ymoan-plugin](https://github.com/Muoan/Ymoan-plugin) - 墨安云插件
+**云崽论坛：[Yunzai论坛/文档](https://yzai.top)**
 
 ****
 
-## 📄版本
+## 😊友情链接：
+[Miao-Yunzai](https://gitee.com/yoimiya-kokomi/Miao-Yunzai)😠
+[TRSS-Yunzai](https://gitee.com/TimeRainStarSky/Yunzai)
 
-v1.0.1
+**API提供者：[record.muoan.com](https://record.muoan.com/)**
+
+**部分代码/功能灵感借鉴：**
+
+[Ymoan-Plugin](https://github.com/Muoan/Ymoan-plugin)
+
+[插件库](https://gitee.com/yhArcadia/Yunzai-Bot-plugins-index)
+
+****
+
+## 😍其他：
+
+**素材来源于网络，仅供交流学习使用，严禁用于商业和非法用途**
+
+**交易问题/其他问题均已本插件无交换任何问题均与本插件无关**
+
+**API图片仓库地址：https://github.com/Muoan/resource**
+
+**API服务地址：https://record.muoan.com**
