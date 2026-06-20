@@ -26,16 +26,18 @@ const GACHA_URL_RE = /https?:\/\/[^\s]*(?:authkey|webstatic|mihoyo|hoyolab|hoyov
 
 export class GachaImport extends plugin {
   constructor() {
-    super()
-    this.name = '墨安抽卡导入'
-    this.event = 'message'
-    this.priority = 10000
-    this.rule = [
-      {
-        reg: null,
-        fnc: 'importUrl',
-      },
-    ]
+    super({
+      name: '墨安抽卡导入',
+      dsc: '自动解析米游社/HoYoLAB抽卡链接并导入数据',
+      event: 'message',
+      priority: 10000,
+      rule: [
+        {
+          reg: null,
+          fnc: 'importUrl',
+        },
+      ],
+    })
   }
 
   /** Auto-detect gacha URLs in user messages */
