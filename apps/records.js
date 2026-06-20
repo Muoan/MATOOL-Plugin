@@ -1,11 +1,31 @@
 /**
  * MATOOL-Plugin - 抽卡记录导入/导出
+ *
+ * 导出流程：
+ *   #导出UID记录 → 请发抽卡链接 → 用户发链接 → 服务器拉取→导出JSON→文件
+ *
+ * 导入流程：
+ *   #导入UID记录 → 请发抽卡链接 → 用户发链接 → 验证成功
+ *   → 请发JSON → 用户发JSON → 服务器导入 → 反馈
+ *
+ * 游戏符号：#原神 *星铁 %绝区零（不指定默认原神）
  */
 import plugin from '../../../lib/plugins/plugin.js'
-import { Cfg } from '../components/index.js'
-import { exportGacha, importGachaJSON, symbolToGameBiz, gameBizToName } from './api.js'
+import { exportGacha, importGachaJSON, importGacha, symbolToGameBiz, gameBizToName } from './api.js'
+import fs from 'fs'
+import path from 'path'
 
+const STATE = new Map()
+const STATE_TTL = 120_000 // 120s
 const SYMBOL_GAME = { '#': 'gs', '*': 'sr', '%': 'zzz' }
+
+// 定时清理过期状态
+setInterval(() => {
+  const now = Date.now()
+  for (const [k, v] of STATE) {
+    if (now - v._ts > STATE_TTL) STATE.delete(k)
+  }
+}, 30_000).unref()
 
 export class matRecords extends plugin {
   constructor() {
@@ -15,151 +35,298 @@ export class matRecords extends plugin {
       event: 'message',
       priority: 9999,
       rule: [
-        { reg: /^#?[*%]?(导入|导出)\s*\d{8,10}\s*记录/i, fnc: 'recordsCmd' },
+        { reg: /^#?[*%]?(导入|导出)\s*\d{8,10}\s*(记录|json)/i, fnc: 'recordsCmd' },
       ],
     })
   }
 
+  // ────────── 主命令入口 ──────────
+
   async recordsCmd() {
     const msg = this.e.msg.trim()
-    // Extract game symbol
+
     let trimmed = msg.replace(/^#/, '')
     const first = trimmed.charAt(0)
     const gameSym = SYMBOL_GAME[first] || '#'
     if (gameSym !== '#') trimmed = trimmed.slice(1)
 
-    const cmd = trimmed.match(/(导入|导出)/i)[0]
+    const cmdMatch = trimmed.match(/(导入|导出)/i)
+    if (!cmdMatch) return false
+    const cmd = cmdMatch[0]
+
     const uidMatch = trimmed.match(/(\d{8,10})/)
-    const uid = uidMatch ? uidMatch[1] : ''
-    if (!uid) {
-      this.reply('格式: ' + gameSym + cmd + 'UID记录')
+    const targetUid = uidMatch ? uidMatch[1] : ''
+    if (!targetUid) {
+      this.reply('格式: 游戏符号+导入/导出+UID+记录\n示例: #导出128814012记录')
       return false
     }
 
     const gameBiz = symbolToGameBiz(gameSym)
     const gameName = gameBizToName(gameBiz)
 
-    if (cmd === '导出') {
-      return this._export(uid, gameBiz, gameName)
-    } else if (cmd === '导入') {
-      return this._import(uid, gameBiz, gameName)
-    }
+    if (cmd === '导出') return this._startExport(targetUid, gameBiz, gameName)
+    if (cmd === '导入') return this._startImport(targetUid, gameBiz, gameName)
+    return false
   }
 
-  async _export(uid, gameBiz, gameName) {
-    this.reply('正在导出 ' + gameName + ' UID:' + uid + ' 的抽卡记录...')
+  // ────────── 导出流程 ──────────
 
-    const result = await exportGacha(uid, gameBiz)
-    if (result.code !== 0) {
-      this.reply('导出失败：' + result.message)
-      return false
+  _startExport(uid, gameBiz, gameName) {
+    const userId = this.e.user_id
+    STATE.set(userId, { type: 'export', uid, gameBiz, gameName, _ts: Date.now() })
+    this.setContext('handleExportLink')
+
+    this.reply([
+      '📤 导出 ' + gameName + ' UID:' + uid,
+      '',
+      '━━━━━━━━━━━━━━━━',
+      '',
+      '请发送该账号的抽卡链接',
+      '（游戏内 → 祈愿/跃迁记录 → 点分享复制链接）',
+      '',
+      '⏱ 120 秒内有效',
+      '━━━━━━━━━━━━━━━━',
+    ].join('\n'))
+    return true
+  }
+
+  async handleExportLink() {
+    const msg = this.e.msg.trim()
+    const userId = this.e.user_id
+    const state = STATE.get(userId)
+    STATE.delete(userId)
+
+    if (!state || state.type !== 'export') {
+      this.reply('⚠ 会话已过期，请重新发送命令')
+      return true
+    }
+
+    const urlMatch = msg.match(/https?:\/\/[^\s]*(?:authkey|webstatic|mihoyo|hoyolab|hoyoverse)[^\s]*/i)
+    if (!urlMatch) {
+      this.reply('⏰ 未检测到抽卡链接，已取消导出')
+      return true
+    }
+    const gachaUrl = urlMatch[0]
+    const { uid, gameBiz, gameName } = state
+
+    this.reply('⏳ 正在拉取抽卡数据...')
+
+    // 第1步：用链接拉取数据并导入服务器
+    const importResult = await importGacha(gachaUrl)
+    if (importResult.code !== 0) {
+      this.reply('❌ 拉取数据失败：' + (importResult.message || '链接无效或已过期'))
+      return true
+    }
+
+    this.reply('✅ 数据同步完成，正在生成文件...')
+
+    // 第2步：从服务器导出为 JSON
+    const exportResult = await exportGacha(uid, gameBiz)
+    if (exportResult.code !== 0) {
+      this.reply('❌ 导出失败：' + (exportResult.message || '未知错误'))
+      return true
     }
 
     try {
-      const data = result.data
-      // Build JSON file content
+      const data = exportResult.data
       const fileContent = JSON.stringify(data, null, 2)
-      const fileName = 'gacha_export_' + uid + '_' + gameName + '.json'
-      const filePath = process.cwd() + '/data/MATOOL-Plugin/' + fileName
+      const fileName = 'gacha_' + uid + '_' + gameName + '.json'
 
-      // Ensure directory exists
       const dir = process.cwd() + '/data/MATOOL-Plugin/'
-      if (!require('fs').existsSync(dir)) {
-        require('fs').mkdirSync(dir, { recursive: true })
-      }
+      const filePath = path.join(dir, fileName)
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+      fs.writeFileSync(filePath, fileContent, 'utf8')
 
-      require('fs').writeFileSync(filePath, fileContent, 'utf8')
+      // 发送文件到 QQ
+      try { this.e.reply(segment.file(filePath)) } catch (_) {}
 
-      // Send the file
       this.reply([
-        '导出成功！' + gameName + ' UID:' + uid + '，共 ' + (data.total || 0) + ' 条记录',
+        '✅ 导出成功！',
         '',
         '━━━━━━━━━━━━━━━━',
+        '  游戏: ' + gameName,
+        '  UID: ' + uid,
+        '  记录: ' + (data.total || 0) + ' 条',
         '  文件: ' + fileName,
-        '  路径: ' + filePath,
         '━━━━━━━━━━━━━━━━',
       ].join('\n'))
-
-      // Try to send as file attachment
-      if (typeof this.e.reply === 'function') {
-        this.e.reply(require('fs').readFileSync(filePath), { name: fileName })
-      }
     } catch (e) {
-      this.reply('导出失败：' + e.message)
+      this.reply('❌ 文件生成失败：' + e.message)
     }
     return true
   }
 
-  async _import(uid, gameBiz, gameName) {
-    // Get the JSON content - could be inline in message or as a file/URL
+  // ────────── 导入流程 ──────────
+
+  _startImport(uid, gameBiz, gameName) {
+    const userId = this.e.user_id
+    STATE.set(userId, { type: 'import_link', uid, gameBiz, gameName, _ts: Date.now() })
+    this.setContext('handleImportLink')
+
+    this.reply([
+      '📥 导入 ' + gameName + ' UID:' + uid,
+      '',
+      '━━━━━━━━━━━━━━━━',
+      '',
+      '第1步：请发送该账号的抽卡链接',
+      '（用于验证身份并同步官方数据）',
+      '',
+      '⏱ 120 秒内有效',
+      '━━━━━━━━━━━━━━━━',
+    ].join('\n'))
+    return true
+  }
+
+  async handleImportLink() {
     const msg = this.e.msg.trim()
+    const userId = this.e.user_id
+    const state = STATE.get(userId)
 
-    // Remove the command prefix to get the content
-    let content = msg.replace(/^#?[*%]?(导入)\s*\d{8,10}\s*记录\s*/i, '').trim()
-
-    if (!content) {
-      this.reply([
-        '格式: #导入UID记录 <JSON内容>',
-        '示例: #导入128814012记录 {"records":[{...}]}',
-        '或导入来自导出的 JSON 文件内容',
-      ].join('\n'))
-      return false
+    if (!state || state.type !== 'import_link') {
+      this.reply('⚠ 会话已过期，请重新发送命令')
+      return true
     }
 
-    this.reply('正在导入 ' + gameName + ' UID:' + uid + ' 的抽卡记录...')
+    const urlMatch = msg.match(/https?:\/\/[^\s]*(?:authkey|webstatic|mihoyo|hoyolab|hoyoverse)[^\s]*/i)
+    if (!urlMatch) {
+      this.reply('⏰ 未检测到抽卡链接，已取消导入')
+      STATE.delete(userId)
+      return true
+    }
+    const gachaUrl = urlMatch[0]
+    const { uid, gameBiz, gameName } = state
 
-    // Try to parse as JSON
-    let records = null
-    try {
-      // If content starts with { or [, try to parse as JSON directly
-      if (content.startsWith('{') || content.startsWith('[')) {
-        const jsonData = JSON.parse(content)
-        records = jsonData.records || jsonData
-        // If it's a flat array, use it directly
-        if (Array.isArray(jsonData) && jsonData.length > 0 && jsonData[0].gacha_type) {
-          records = jsonData
+    this.reply('⏳ 正在验证抽卡链接...')
+
+    // 用链接拉取数据（验证链接 + 同步官方数据）
+    const result = await importGacha(gachaUrl)
+    if (result.code !== 0) {
+      this.reply('❌ 链接验证失败：' + (result.message || '链接无效或已过期'))
+      STATE.delete(userId)
+      return true
+    }
+
+    // 使用服务器返回的已验证 UID（而非用户命令中可能不准确的 UID）
+    const verifiedUid = (result.data && result.data.uid) ? String(result.data.uid) : uid
+    const verifiedBiz = (result.data && result.data.game_biz) ? result.data.game_biz : gameBiz
+    STATE.set(userId, { type: 'import_json', uid: verifiedUid, gameBiz: verifiedBiz, gameName, _ts: Date.now() })
+    this.setContext('handleImportJson')
+
+    this.reply([
+      '✅ 链接验证成功，官方数据已同步',
+      '',
+      '━━━━━━━━━━━━━━━━',
+      '',
+      '第2步：请发送要导入的 JSON 文件',
+      '',
+      '可以：',
+      '• 直接粘贴 JSON 文本',
+      '• 发送文件下载链接',
+      '• 发送文件（QQ文件消息）',
+      '',
+      '⏱ 120 秒内有效',
+      '━━━━━━━━━━━━━━━━',
+    ].join('\n'))
+    return true
+  }
+
+  async handleImportJson() {
+    const msg = this.e.msg.trim()
+    const userId = this.e.user_id
+    const state = STATE.get(userId)
+    STATE.delete(userId)
+
+    if (!state || state.type !== 'import_json') {
+      this.reply('⚠ 会话已过期，请重新发送命令')
+      return true
+    }
+
+    const { uid, gameBiz, gameName } = state
+    let jsonText = ''
+
+    // 尝试从文件附件读取
+    const fileElem = this.e.message?.find(m => m.type === 'file')
+    if (fileElem) {
+      this.reply('⏳ 正在读取文件...')
+      try {
+        const fid = fileElem.file?.startsWith('fid:') ? fileElem.file.slice(4) : fileElem.file
+        const friend = this.e.bot?.pickFriend(this.e.user_id)
+        if (!friend) throw new Error('无法获取好友对象')
+        const fileInfo = await friend.getFileInfo(fid)
+        if (fileInfo?.url) {
+          const resp = await globalThis.fetch(fileInfo.url)
+          if (!resp.ok) throw new Error('HTTP ' + resp.status)
+          jsonText = await resp.text()
+        } else {
+          this.reply('❌ 无法获取文件内容（可能是下载链接为空）')
+          return true
         }
-      } else {
-        // Might be a URL - try to fetch from URL
-        this.reply('尝试从链接获取 JSON 数据...')
-        const resp = await globalThis.fetch(content, {
+      } catch (e) {
+        this.reply('❌ 文件读取失败：' + e.message)
+        return true
+      }
+    } else if (msg.startsWith('http://') || msg.startsWith('https://')) {
+      // 从链接下载
+      this.reply('⏳ 正在下载...')
+      try {
+        const resp = await globalThis.fetch(msg, {
           signal: AbortSignal.timeout(15000),
           headers: { 'User-Agent': 'MATOOL-Plugin/Yunzai' },
         })
         if (!resp.ok) throw new Error('HTTP ' + resp.status)
-        const jsonData = await resp.json()
-        records = jsonData.records || jsonData
-        if (Array.isArray(jsonData) && jsonData.length > 0 && jsonData[0].gacha_type) {
-          records = jsonData
-        }
+        jsonText = await resp.text()
+      } catch (e) {
+        this.reply('❌ 下载失败：' + e.message)
+        return true
       }
+    } else if (msg.startsWith('{') || msg.startsWith('[')) {
+      // 直接粘贴 JSON
+      jsonText = msg
+    } else {
+      this.reply('❌ 无法识别：请发送 JSON 文件内容（{...} 或 [...] 开头）或文件下载链接')
+      return true
+    }
+
+    // 解析 JSON
+    let records = null
+    try {
+      const jsonData = JSON.parse(jsonText)
+      records = jsonData.records || jsonData
+      if (Array.isArray(jsonData) && jsonData[0]?.gacha_type) records = jsonData
     } catch (e) {
-      this.reply('JSON 解析失败：' + e.message)
-      return false
+      this.reply('❌ JSON 解析失败：内容格式不正确')
+      return true
     }
 
     if (!Array.isArray(records) || records.length === 0) {
-      this.reply('未找到有效的抽卡记录数据')
-      return false
+      this.reply('❌ 未找到有效的抽卡记录数据')
+      return true
     }
 
-    this.reply('已解析 ' + records.length + ' 条记录，正在导入...')
+    this.reply('⏳ 已解析 ' + records.length + ' 条记录，正在导入...')
 
     const result = await importGachaJSON(uid, gameBiz, records)
     if (result.code !== 0) {
-      this.reply('导入失败：' + result.message)
-      return false
+      this.reply('❌ 导入失败：' + (result.message || '未知错误'))
+      return true
     }
 
+    const data = result.data || {}
+    const importedCount = data.total_genshin || data.total_starrail || data.total_zzz || records.length
+    const gameSym = gameBiz === 'hk4e_cn' ? '#' : gameBiz === 'hkrpg_cn' ? '*' : '%'
+
     this.reply([
-      '导入成功！' + gameName + ' UID:' + uid,
+      '✅ 导入成功！',
       '',
       '━━━━━━━━━━━━━━━━',
-      '  导入 ' + records.length + ' 条',
-      '  新增 ' + (result.data ? (result.data.total_genshin || result.data.total_starrail || result.data.total_zzz || 0) : 0) + ' 条',
+      '  游戏: ' + gameName,
+      '  UID: ' + uid,
+      '  解析: ' + records.length + ' 条',
+      '  导入: ' + importedCount + ' 条',
       '━━━━━━━━━━━━━━━━',
       '',
-      '查看统计： ' + (gameBiz === 'hk4e_cn' ? '#' : gameBiz === 'hkrpg_cn' ? '*' : '%') + '总结' + uid,
+      '查看统计： ' + gameSym + '总结' + uid,
+      '查看分析： ' + gameSym + '分析' + uid,
     ].join('\n'))
     return true
   }
