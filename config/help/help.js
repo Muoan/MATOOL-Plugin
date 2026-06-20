@@ -36,12 +36,37 @@ export const helpList = [
       {
         icon: 38,
         title: '*总结[uid]',
-        desc: '星铁抽卡（同上可换分析/五星/抽卡）',
+        desc: '星铁抽卡（同样可用分析/五星/抽卡/导出/导入）',
       },
       {
         icon: 41,
         title: '%总结[uid]',
-        desc: '绝区零抽卡（同上可换分析/五星/抽卡）',
+        desc: '绝区零抽卡（同样可用分析/五星/抽卡/导出/导入）',
+      },
+    ],
+  },
+  {
+    group: '记录管理',
+    list: [
+      {
+        icon: 84,
+        title: '#导出UID记录',
+        desc: '导出 UIGF v4.2 JSON 文件',
+      },
+      {
+        icon: 85,
+        title: '#导入UID记录',
+        desc: '支持 UIGF v4.2 / v2.2 / 旧格式',
+      },
+      {
+        icon: 73,
+        title: '链接导入',
+        desc: '发送抽卡链接自动导入到服务器',
+      },
+      {
+        icon: 79,
+        title: '多游戏导出',
+        desc: '# 原神 / * 星铁 / % 绝区零',
       },
     ],
   },
@@ -74,39 +99,14 @@ export const helpList = [
         desc: '查看本帮助',
       },
       {
-        icon: 79,
-        title: '支持游戏',
-        desc: '原神(#) / 星铁(*) / 绝区零(%)',
-      },
-      {
         icon: 73,
         title: '#墨安更新',
         desc: '更新插件（仅主人）',
       },
-    ],
-  },
-  {
-    group: '记录管理',
-    list: [
       {
         icon: 84,
-        title: '#导出UID记录',
-        desc: '导出抽卡记录为JSON文件',
-      },
-      {
-        icon: 85,
-        title: '#导入UID记录',
-        desc: '从JSON内容或链接导入抽卡记录',
-      },
-    ],
-  },
-  {
-    group: '抽卡导入',
-    list: [
-      {
-        icon: 79,
-        title: '发送抽卡链接',
-        desc: '自动解析并导入米游社/HoYoLAB抽卡链接到服务器，成功后可用 #总结 查看',
+        title: '游戏符号',
+        desc: '#原神 / *星铁 / %绝区零',
       },
     ],
   },
