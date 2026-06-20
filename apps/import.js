@@ -33,7 +33,7 @@ export class GachaImport extends plugin {
       priority: 1,
       rule: [
         {
-          reg: null,
+          reg: GACHA_URL_RE,
           fnc: 'importUrl',
         },
       ],
