@@ -110,11 +110,15 @@ export class matRecords extends plugin {
       // 导出：验证通过后直接导出
       stDel(this.e.user_id)
       this.reply('✅ 验证成功，正在导出...')
-      return await this._doExport(state.uid, state.gameBiz, state.gameName)
+      // 使用验证后服务器返回的 game_biz（自动检测），而不是命令输入的默认值
+      const actualBiz = vb
+      const actualName = gameBizToName(actualBiz)
+      return await this._doExport(state.uid, actualBiz, actualName)
     } else {
       // 导入：进入等待 JSON 阶段
-      stSet(this.e.user_id, { step: 'json', mode: 'import', uid: state.uid, gameBiz: vb, gameName: state.gameName })
-      this.reply('✅ 验证成功\n\n发送 JSON 文件继续导入')
+      const actualName = gameBizToName(vb)
+      stSet(this.e.user_id, { step: 'json', mode: 'import', uid: state.uid, gameBiz: vb, gameName: actualName })
+      this.reply('✅ 验证成功\n\n发送 ' + actualName + ' JSON 文件继续导入')
       return 'return'
     }
   }
