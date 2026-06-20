@@ -13,8 +13,8 @@ export class matSet extends plugin {
       event: 'message',
       priority: 500,
       rule: [
+        { reg: /^#?墨安绑定\s*\S+/i, fnc: 'bindKey' },
         { reg: /^#?墨安绑定\s*$/i, fnc: 'bindKey' },
-        { reg: /^#?墨安绑定\s+\S+/i, fnc: 'bindKey' },
         { reg: /^#?墨安信息$/i, fnc: 'userInfo' },
         { reg: /^#?墨安解绑$/i, fnc: 'unbindKey' },
         { reg: /^#?墨安设置\s+/i, fnc: 'setDefault' },
