@@ -110,11 +110,15 @@ export async function importGacha(gachaUrl) {
       const game = gameMap[gameBiz] || 'gs'
       const gameName = { gs: '原神', sr: '星穹铁道', zzz: '绝区零' }[game] || game
       const imported = data.total_genshin || data.total_starrail || data.total_zzz || 0
-      return {
-        code: 0,
-        message: '解析成功！' + gameName + ' UID: ' + (data.uid || '') + '，共导入 ' + imported + ' 条记录',
-        data: { game, uid: data.uid, imported },
+      if (imported > 0) {
+        return {
+          code: 0,
+          message: '解析成功！' + gameName + ' UID: ' + (data.uid || '') + '，共导入 ' + imported + ' 条记录',
+          data: { game, uid: data.uid, imported },
+        }
       }
+      // Server returned code 0 but 0 records imported — likely authkey expired
+      return { code: 402, message: data.message || '未导入任何记录，抽卡链接可能已过期' }
     }
 
     const errMsg = json.message || '请求失败 (' + json.code + ')'

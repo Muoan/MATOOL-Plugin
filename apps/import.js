@@ -57,7 +57,7 @@ export class GachaImport extends plugin {
 
     const result = await importGacha(gachaUrl)
 
-    if (result.code === 0) {
+    if (result.code === 0 && result.data?.imported > 0) {
       const data = result.data
       const gameSym = { gs: '#', sr: '*', zzz: '%' }[data.game] || '#'
       this.reply(
@@ -67,8 +67,22 @@ export class GachaImport extends plugin {
         `可使用以下命令查看：\n` +
         `${gameSym}统计${data.uid}   ${gameSym}分析${data.uid}`
       )
+    } else if (result.code === 0 && (!result.data || result.data.imported === 0)) {
+      this.reply(
+        `❌ 未导入新记录\n` +
+        `原因：服务器返回了空数据\n` +
+        `建议检查：\n` +
+        `1. 抽卡链接是否已过期（需重新生成）\n` +
+        `2. 服务器网络状况`
+      )
+    } else if (result.code === 401) {
+      this.reply(`❌ 未绑定 API Key\n请使用 #墨安绑定 mo_xxx 绑定后再试`)
+    } else if (result.code === 402) {
+      this.reply(`❌ 抽卡链接无效\n原因：${result.message}`)
+    } else if (result.code === 500) {
+      this.reply(`❌ 服务器错误\n原因：${result.message}\n\n请稍后重试或联系管理员`)
     } else {
-      this.reply(`❌ 解析失败\n原因：${result.message}`)
+      this.reply(`❌ 解析失败\n原因：${result.message || '未知错误'}`)
     }
 
     return true
