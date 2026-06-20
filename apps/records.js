@@ -172,8 +172,11 @@ export class matRecords extends plugin {
       const gameMap = { hk4e_cn: 'hk4e', hkrpg_cn: 'hkrpg', nap_cn: 'nap' }
       const uigfKey = gameMap[gameBiz]
       let total = 0
-      if (data.info && uigfKey && Array.isArray(data[uigfKey]) && Array.isArray(data[uigfKey][0]?.list)) {
-        total = data[uigfKey][0].list.length
+      if (data.info && uigfKey && Array.isArray(data[uigfKey])) {
+        // UIGF v4.2 格式：可能有多组 (不同 uid/timezone/lang)
+        for (const group of data[uigfKey]) {
+          if (Array.isArray(group?.list)) total += group.list.length
+        }
       } else {
         total = data.total || 0
       }
