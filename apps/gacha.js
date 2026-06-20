@@ -12,10 +12,13 @@ function constLabel(count) {
 }
 
 // 游戏符号映射: #=gs(原神), *=sr(星铁), %=zzz(绝区零)
-// # 会被 TRSS-Yunzai 作为命令前缀吃掉，不出现，* % 保留
+// 也支持 TRSS-Yunzai 替换后的 星铁/绝区零 前缀
 const SYMBOL_GAME = {
   '*': 'sr',
   '%': 'zzz',
+  '星铁': 'sr',
+  '崩铁': 'sr',
+  '绝区零': 'zzz',
 }
 
 export class matGacha extends plugin {
@@ -26,8 +29,8 @@ export class matGacha extends plugin {
       event: 'message',
       priority: 9999,
       rule: [
-        { reg: /^#?[*%]?(总结|分析|五星)/i, fnc: 'analysis' },
-        { reg: /^#?[*%]?(抽卡|查询)\s*/i, fnc: 'query' },
+        { reg: /^#?(?:[*%]|星铁|绝区零)?(总结|分析|五星)/i, fnc: 'analysis' },
+        { reg: /^#?(?:[*%]|星铁|绝区零)?(抽卡|查询)\s*/i, fnc: 'query' },
       ],
     })
   }
@@ -36,9 +39,16 @@ export class matGacha extends plugin {
   _parse(msg) {
     // 判断游戏
     let trimmed = msg.replace(/^#/, '') // 去掉可选的 # 前缀
-    const first = trimmed.charAt(0)
-    let game = SYMBOL_GAME[first] || 'gs'
-    if (game !== 'gs') trimmed = trimmed.slice(1) // 吃掉游戏符号
+    // 检测游戏符号: * % 星铁 崩铁 绝区零（TRSS-Yunzai 将 *→#星铁, %→#绝区零）
+    let game = 'gs'
+    const matchedPrefix = trimmed.match(/^(星铁|崩铁|绝区零|[#*%])/)
+    if (matchedPrefix) {
+      const prefix = matchedPrefix[1]
+      if (SYMBOL_GAME[prefix]) {
+        game = SYMBOL_GAME[prefix]
+        trimmed = trimmed.slice(prefix.length)
+      }
+    }
     msg = trimmed
 
     // 判断类型
