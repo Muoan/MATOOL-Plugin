@@ -1,7 +1,6 @@
 /**
  * MATOOL-Plugin - API 请求模块
  */
-import https from 'https'
 import { Cfg } from '../components/index.js'
 
 export function getApiBase() {
@@ -72,49 +71,7 @@ export async function getUserInfo(apiKey) {
 }
 
 /**
- * Direct fetch bypassing CDN - connects to origin server IP directly
- * with proper Host header for virtual hosting support.
- */
-const ORIGIN_IP = '198.44.177.135'
-
-function fetchOrigin(urlStr, options = {}) {
-  const u = new URL(urlStr)
-  return new Promise((resolve, reject) => {
-    const reqOpts = {
-      hostname: ORIGIN_IP,
-      port: 443,
-      path: u.pathname + u.search,
-      method: options.method || 'GET',
-      headers: {
-        Host: u.hostname,
-        ...options.headers,
-      },
-      servername: u.hostname,
-      rejectUnauthorized: false,
-    }
-    const req = https.request(reqOpts, (res) => {
-      let data = ''
-      res.on('data', c => (data += c))
-      res.on('end', () => {
-        try {
-          resolve({ ok: res.statusCode < 400, statusCode: res.statusCode, json: () => JSON.parse(data) })
-        } catch (e) {
-          reject(new Error('响应解析失败: ' + data.slice(0, 100)))
-        }
-      })
-    })
-    req.on('error', reject)
-    if (options.timeout) {
-      req.setTimeout(options.timeout, () => { req.destroy(); reject(new Error('连接超时')) })
-    }
-    if (options.body) req.write(options.body)
-    req.end()
-  })
-}
-
-/**
  * Import gacha records via URL - sends URL to server's /api/gacha/import-link endpoint.
- * Uses direct origin connection to bypass CDN timeout issues.
  *
  * @param {string} gachaUrl - The full gacha URL (hoyolab/mihoyo authkey URL)
  * @returns {{ code: number, message: string, data?: { game: string, uid: string, imported: number } }}
@@ -128,9 +85,9 @@ export async function importGacha(gachaUrl) {
   const base = getApiBase()
   try {
     const url = base + '/gacha/import-link'
-    const resp = await fetchOrigin(url, {
+    const resp = await globalThis.fetch(url, {
       method: 'POST',
-      timeout: 150000,
+      signal: AbortSignal.timeout(120000),
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'MATOOL-Plugin/Yunzai',
