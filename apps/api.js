@@ -90,7 +90,7 @@ export async function importGacha(gachaUrl) {
 
   const base = getApiBase()
   try {
-    const url = base + '/api/parse-gacha-link'
+    const url = base + '/api/user/parse-gacha-link'
     const resp = await globalThis.fetch(url, {
       method: 'POST',
       signal: AbortSignal.timeout(120000),
