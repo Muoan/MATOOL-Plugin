@@ -30,7 +30,7 @@ export class GachaImport extends plugin {
       name: '墨安抽卡导入',
       dsc: '自动解析米游社/HoYoLAB抽卡链接并导入数据',
       event: 'message',
-      priority: 10000,
+      priority: 1,
       rule: [
         {
           reg: null,
@@ -58,14 +58,14 @@ export class GachaImport extends plugin {
     const result = await importGacha(gachaUrl)
 
     if (result.code === 0) {
-      const { game, uid } = result.data
-      const gameSym = { gs: '#', sr: '*', zzz: '%' }[game] || '#'
+      const data = result.data
+      const gameSym = { gs: '#', sr: '*', zzz: '%' }[data.game] || '#'
       this.reply(
         `✅ 解析成功！\n` +
-        `UID：${uid}\n` +
-        `导入：${result.data.imported} 条记录\n\n` +
+        `UID：${data.uid}\n` +
+        `导入：${data.imported} 条记录\n\n` +
         `可使用以下命令查看：\n` +
-        `${gameSym}统计${uid}   ${gameSym}分析${uid}`
+        `${gameSym}统计${data.uid}   ${gameSym}分析${data.uid}`
       )
     } else {
       this.reply(`❌ 解析失败\n原因：${result.message}`)
