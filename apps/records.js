@@ -1,7 +1,7 @@
 /**
  * MATOOL-Plugin - 抽卡记录导出/导入
  *
- * 导出： #导出UID记录 → 直接导出服务端数据 → JSON文件
+ * 导出： #导出UID记录 → 发链接 → 验证 → JSON文件
  * 导入： #导入UID记录 → 发链接 → 验证 → 发JSON → 导入
  *
  * 游戏符号：#原神 *星铁 %绝区零（不指定默认原神）
@@ -12,7 +12,7 @@
  *   accept 无状态时返回 false，正常流程不受影响。
  */
 import plugin from '../../../lib/plugins/plugin.js'
-import { exportGacha, importGachaJSON, importGacha, symbolToGameBiz, gameBizToName } from './api.js'
+import { exportGacha, importGachaJSON, importGacha, verifyLink, symbolToGameBiz, gameBizToName } from './api.js'
 import fs from 'fs'
 import path from 'path'
 
@@ -59,28 +59,8 @@ export class matRecords extends plugin {
     const gameBiz = this._gameBiz()
     const gameName = gameBizToName(gameBiz)
     if (!uid) return false
-
-    this.reply('⏳ 正在导出...')
-
-    const r = await exportGacha(uid, gameBiz)
-    if (r.code !== 0) {
-      this.reply('❌ 导出失败：' + (r.message || '未知错误'))
-      return true
-    }
-
-    try {
-      const data = r.data
-      const fc = JSON.stringify(data, null, 2)
-      const fn = 'gacha_' + uid + '_' + gameName + '.json'
-      const dir = process.cwd() + '/data/MATOOL-Plugin/'
-      const fp = path.join(dir, fn)
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-      fs.writeFileSync(fp, fc, 'utf8')
-      try { this.e.reply(segment.file(fp)) } catch (_) {}
-      this.reply('✅ 导出成功 ' + gameName + ' UID:' + uid + ' (' + (data.total || 0) + '条)')
-    } catch (e) {
-      this.reply('❌ 文件生成失败：' + e.message)
-    }
+    stSet(this.e.user_id, { step: 'link', mode: 'export', uid, gameBiz, gameName })
+    this.reply('📤 导出 ' + gameName + ' UID:' + uid + '\n\n发送该账号的抽卡链接验证身份\n⏱ 120秒有效')
     return true
   }
 
@@ -91,8 +71,8 @@ export class matRecords extends plugin {
     const gameBiz = this._gameBiz()
     const gameName = gameBizToName(gameBiz)
     if (!uid) return false
-    stSet(this.e.user_id, { step: 'link', uid, gameBiz, gameName })
-    this.reply('📥 导入 ' + gameName + ' UID:' + uid + '\n\n发送该账号的抽卡链接\n⏱ 120秒有效')
+    stSet(this.e.user_id, { step: 'link', mode: 'import', uid, gameBiz, gameName })
+    this.reply('📥 导入 ' + gameName + ' UID:' + uid + '\n\n发送该账号的抽卡链接验证身份\n⏱ 120秒有效')
     return true
   }
 
@@ -113,14 +93,30 @@ export class matRecords extends plugin {
     if (!url) { stDel(this.e.user_id); this.reply('⏰ 未检测到抽卡链接，已取消'); return 'return' }
 
     this.reply('⏳ 正在验证...')
-    const r = await importGacha(url)
-    if (r.code !== 0) { stDel(this.e.user_id); this.reply('❌ 验证失败：' + (r.message || '链接无效')); return 'return' }
+    const r = await verifyLink(url)
+    if (r.code !== 0) { stDel(this.e.user_id); this.reply('❌ ' + (r.message || '链接无效')); return 'return' }
 
-    const vu = r.data?.uid ? String(r.data.uid) : state.uid
+    const vu = r.data?.uid ? String(r.data.uid) : ''
     const vb = r.data?.game_biz || state.gameBiz
-    stSet(this.e.user_id, { step: 'json', uid: vu, gameBiz: vb, gameName: state.gameName })
-    this.reply('✅ 验证成功\n\n发送 JSON 文件继续导入')
-    return 'return'
+
+    // 检查 UID 是否匹配用户指定的 UID
+    if (vu && vu !== state.uid) {
+      stDel(this.e.user_id)
+      this.reply('❌ 验证失败：该链接对应 UID ' + vu + '，与指定的 ' + state.uid + ' 不符')
+      return 'return'
+    }
+
+    if (state.mode === 'export') {
+      // 导出：验证通过后直接导出
+      stDel(this.e.user_id)
+      this.reply('✅ 验证成功，正在导出...')
+      return await this._doExport(state.uid, state.gameBiz, state.gameName)
+    } else {
+      // 导入：进入等待 JSON 阶段
+      stSet(this.e.user_id, { step: 'json', mode: 'import', uid: state.uid, gameBiz: vb, gameName: state.gameName })
+      this.reply('✅ 验证成功\n\n发送 JSON 文件继续导入')
+      return 'return'
+    }
   }
 
   async _handleJson(state) {
@@ -164,13 +160,67 @@ export class matRecords extends plugin {
     return this._doImport(uid, gameBiz, gameName, text)
   }
 
+  async _doExport(uid, gameBiz, gameName) {
+    const r = await exportGacha(uid, gameBiz)
+    if (r.code !== 0) {
+      this.reply('❌ 导出失败：' + (r.message || '未知错误'))
+      return 'return'
+    }
+
+    try {
+      const data = r.data
+      const gameMap = { hk4e_cn: 'hk4e', hkrpg_cn: 'hkrpg', nap_cn: 'nap' }
+      const uigfKey = gameMap[gameBiz]
+      let total = 0
+      if (data.info && uigfKey && Array.isArray(data[uigfKey]) && Array.isArray(data[uigfKey][0]?.list)) {
+        total = data[uigfKey][0].list.length
+      } else {
+        total = data.total || 0
+      }
+      const fc = JSON.stringify(data, null, 2)
+      const fn = 'gacha_' + uid + '_' + gameName + '.json'
+      const dir = process.cwd() + '/data/MATOOL-Plugin/'
+      const fp = path.join(dir, fn)
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+      fs.writeFileSync(fp, fc, 'utf8')
+      try { this.e.reply(segment.file(fp)) } catch (_) {}
+      this.reply('✅ 导出成功 ' + gameName + ' UID:' + uid + ' (' + total + '条)')
+    } catch (e) {
+      this.reply('❌ 导出失败：' + e.message)
+    }
+    return 'return'
+  }
+
   async _doImport(uid, gameBiz, gameName, text) {
     stDel(this.e.user_id)
     let records
     try {
       const j = JSON.parse(text)
-      records = j.records || j
-      if (Array.isArray(j) && j[0]?.gacha_type) records = j
+      // UIGF v4.2 格式：{ hk4e: [{ uid: '...', list: [...] }] }
+      const gameMap = { hk4e_cn: 'hk4e', hkrpg_cn: 'hkrpg', nap_cn: 'nap' }
+      const uigfKey = gameMap[gameBiz]
+      if (j.info && uigfKey && Array.isArray(j[uigfKey]) && Array.isArray(j[uigfKey][0]?.list)) {
+        records = j[uigfKey][0].list
+      } else if (j.info && !uigfKey) {
+        // gameBiz 不匹配，遍历所有游戏
+        for (const k of ['hk4e', 'hkrpg', 'nap']) {
+          if (Array.isArray(j[k]) && Array.isArray(j[k][0]?.list) && j[k][0].list.length > 0) {
+            records = j[k][0].list
+            break
+          }
+        }
+      } else {
+        // 旧格式：{ records: { hk4e_cn: [...] } } 或直接数组
+        if (j.records && typeof j.records === 'object') {
+          const raw = j.records[gameBiz]
+          if (Array.isArray(raw)) { records = raw }
+          else { records = j.records }
+        } else if (Array.isArray(j)) {
+          records = j
+        } else {
+          records = j.records || j
+        }
+      }
     } catch (_) { this.reply('❌ JSON 格式错误'); return 'return' }
 
     if (!Array.isArray(records) || records.length === 0) {

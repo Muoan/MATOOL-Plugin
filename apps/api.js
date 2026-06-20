@@ -124,6 +124,46 @@ export async function importGacha(gachaUrl) {
 
 
 /**
+ * 轻量验证：只检查 authkey 有效性，不导入任何记录
+ * POST /api/gacha/verify-link
+ *
+ * @param {string} link - Authkey URL
+ * @returns {{ code: number, message: string, data?: { uid: string, game_biz: string } }}
+ */
+export async function verifyLink(link) {
+  const apiKey = getAuthKey()
+  if (!apiKey) {
+    return { code: 401, message: '未绑定 API Key，请使用 #墨安绑定 绑定' }
+  }
+
+  const base = getApiBase()
+  try {
+    const url = base + '/gacha/verify-link'
+    const resp = await globalThis.fetch(url, {
+      method: 'POST',
+      signal: AbortSignal.timeout(30000),
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'MATOOL-Plugin/Yunzai',
+        'X-API-Key': apiKey,
+      },
+      body: JSON.stringify({ link }),
+    })
+    const json = await resp.json()
+
+    if (json.code === 0 && json.data) {
+      return { code: 0, message: json.message || '链接有效', data: json.data }
+    }
+
+    const errMsg = json.message || '请求失败 (' + json.code + ')'
+    return { code: json.code || 500, message: errMsg }
+  } catch (e) {
+    return { code: 408, message: '网络请求超时：' + e.message }
+  }
+}
+
+
+/**
  * Export gacha records as JSON file via server export-json endpoint.
  *
  * @param {string} uid - Game UID
