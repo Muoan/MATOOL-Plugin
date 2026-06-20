@@ -128,14 +128,44 @@ export class matRecords extends plugin {
     if (fe) {
       this.reply('⏳ 读取文件中...')
       try {
-        const fid = (fe.file || '').startsWith('fid:') ? fe.file.slice(4) : fe.file
-        const friend = this.e.bot?.pickFriend(this.e.user_id)
-        if (!friend) throw Error('无法获取好友')
-        const info = await friend.getFileInfo(fid)
-        if (!info?.url) throw Error('下载链接为空')
-        const resp = await globalThis.fetch(info.url)
-        if (!resp.ok) throw Error('HTTP ' + resp.status)
-        text = await resp.text()
+        let fileUrl = ''
+        const raw = fe.file || ''
+        // 直接是 URL
+        if (/^https?:\/\//.test(raw)) {
+          fileUrl = raw
+        }
+        // fid: 格式（OICQ），尝试 resolve
+        else if (raw.startsWith('fid:')) {
+          const fid = raw.slice(4)
+          const friend = this.e.bot?.pickFriend(this.e.user_id)
+          if (friend && typeof friend.getFileInfo === 'function') {
+            const info = await friend.getFileInfo(fid)
+            if (info?.url) fileUrl = info.url
+          }
+          if (!fileUrl) throw Error('暂不支持从 OICQ fid 下载文件，请发送文件下载链接或粘贴 JSON 内容')
+        }
+        // 可能是文件路径（Bot 本地文件）
+        else if (raw.startsWith('file://')) {
+          const resp = await globalThis.fetch(raw)
+          if (!resp.ok) throw Error('HTTP ' + resp.status)
+          text = await resp.text()
+        }
+        // fe.file 对象格式
+        else if (typeof raw === 'object' && raw !== null) {
+          if (raw.url) fileUrl = raw.url
+        }
+        // fe.url 备用
+        else if (fe.url) {
+          fileUrl = fe.url
+        }
+
+        if (fileUrl) {
+          const resp = await globalThis.fetch(fileUrl)
+          if (!resp.ok) throw Error('HTTP ' + resp.status)
+          text = await resp.text()
+        }
+
+        if (!text) throw Error('无法获取文件内容')
       } catch (e) { this.reply('❌ 文件读取失败：' + e.message); return 'return' }
     }
 
