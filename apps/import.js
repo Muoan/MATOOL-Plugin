@@ -60,12 +60,16 @@ export class GachaImport extends plugin {
     if (result.code === 0 && result.data?.imported > 0) {
       const data = result.data
       const gameSym = { gs: '#', sr: '*', zzz: '%' }[data.game] || '#'
+      const gameName = { gs: '原神', sr: '星穹铁道', zzz: '绝区零' }[data.game] || data.game
       this.reply(
-        `✅ 解析成功！\n` +
-        `UID：${data.uid}\n` +
-        `导入：${data.imported} 条记录\n\n` +
-        `可使用以下命令查看：\n` +
-        `${gameSym}统计${data.uid}   ${gameSym}分析${data.uid}`
+        `✅ 抽卡数据导入成功\n\n` +
+        `━━━━━━━━━━━━━━━━\n` +
+        ` UID   ${data.uid}\n` +
+        ` 游戏  ${gameName}\n` +
+        ` 记录  ${data.imported} 条\n` +
+        `━━━━━━━━━━━━━━━━\n\n` +
+        `查看统计： ${gameSym}总结${data.uid}\n` +
+        `查看分析： ${gameSym}分析${data.uid}`
       )
     } else if (result.code === 0 && (!result.data || result.data.imported === 0)) {
       this.reply(

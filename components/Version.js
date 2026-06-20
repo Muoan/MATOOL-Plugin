@@ -52,6 +52,21 @@ const Version = {
         },
       ],
     },
+
+  {
+    version: '1.0.2',
+    logs: [
+      {
+        title: '新增功能',
+        logs: [
+          '新增 #导出UID记录 命令，导出抽卡记录为JSON文件',
+          '新增 #导入UID记录 命令，从JSON内容或链接导入抽卡记录',
+          '新增 服务端 export-json/import-json 纯API端点',
+          '新增 帮助页「记录管理」分区',
+        ],
+      },
+    ],
+  },
   ],
 }
 

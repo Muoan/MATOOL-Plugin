@@ -86,6 +86,21 @@ export const helpList = [
     ],
   },
   {
+    group: '记录管理',
+    list: [
+      {
+        icon: 84,
+        title: '#导出UID记录',
+        desc: '导出抽卡记录为JSON文件',
+      },
+      {
+        icon: 85,
+        title: '#导入UID记录',
+        desc: '从JSON内容或链接导入抽卡记录',
+      },
+    ],
+  },
+  {
     group: '抽卡导入',
     list: [
       {
