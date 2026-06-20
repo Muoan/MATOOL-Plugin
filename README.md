@@ -18,10 +18,22 @@
 <details>
   <summary>展开/收起</summary>
 
-**github：**
+**GitHub：**
 
 ```bash
 git clone --depth=1 https://github.com/Muoan/MATOOL-Plugin.git ./plugins/MATOOL-Plugin/
+```
+
+**Gitee：**
+
+```bash
+git clone --depth=1 https://gitee.com/muoan/MATOOL-Plugin.git ./plugins/MATOOL-Plugin/
+```
+
+**GitCode：**
+
+```bash
+git clone --depth=1 https://gitcode.com/muoan/MATOOL-Plugin.git ./plugins/MATOOL-Plugin/
 ```
 
 </details>
