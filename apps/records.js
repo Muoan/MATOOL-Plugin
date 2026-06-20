@@ -246,6 +246,9 @@ export class matRecords extends plugin {
             break
           }
         }
+      } else if (j.info && Array.isArray(j.list) && j.list.length > 0) {
+        // UIGF v2.x 格式：{ info: {...}, list: [...] }
+        records = j.list
       } else {
         // 旧格式：{ records: { hk4e_cn: [...] } } 或直接数组
         if (j.records && typeof j.records === 'object') {
