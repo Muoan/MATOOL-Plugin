@@ -20,6 +20,7 @@
  */
 import plugin from '../../../lib/plugins/plugin.js'
 import { importGacha } from './api.js'
+import { stGet, stDel, stSet } from './records.js'
 
 // Gacha URL 正则：包含 authkey 的米游社/HoYoLAB 链接
 const GACHA_URL_RE = /https?:\/\/[^\s]*(?:authkey|webstatic|mihoyo|hoyolab|hoyoverse)[^\s]*/i
@@ -51,6 +52,12 @@ export class GachaImport extends plugin {
 
     // If message also starts with a known command prefix (#/*/%), let normal command handle it
     if (/^[#\*%]/.test(msg.trim())) return false
+
+    // 检查是否有 records.js 遗留的状态（#导入/导出），有则清除避免两个处理器冲突
+    const existingState = stGet(this.e.user_id)
+    if (existingState) {
+      stDel(this.e.user_id)
+    }
 
     // ── process ──
     this.reply('⏳ 正在解析抽卡链接，请稍候...')

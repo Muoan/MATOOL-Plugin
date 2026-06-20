@@ -23,13 +23,13 @@ const GACHA_URL_RE = /https?:\/\/[^\s]*(?:authkey|webstatic|mihoyo|hoyolab|hoyov
 const STATE = new Map()
 const TTL = 120_000
 
-function stGet(uid) {
+export function stGet(uid) {
   const s = STATE.get(uid)
   if (s && Date.now() - s._ts > TTL) { STATE.delete(uid); return null }
   return s || null
 }
-function stSet(uid, v) { STATE.set(uid, { ...v, _ts: Date.now() }) }
-function stDel(uid) { STATE.delete(uid) }
+export function stSet(uid, v) { STATE.set(uid, { ...v, _ts: Date.now() }) }
+export function stDel(uid) { STATE.delete(uid) }
 
 setInterval(() => {
   const now = Date.now()
