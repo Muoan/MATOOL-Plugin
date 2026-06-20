@@ -1,0 +1,138 @@
+{{extend defaultLayout}}
+
+{{block 'css'}}
+<style>
+body { width: 800px; background: #eef2f7; font-size: 16px; }
+.container { width: 780px; padding: 18px 10px 12px; }
+.source { text-align: right; font-size: 10px; color: #78909c; margin-top: 2px; }
+.stat-grid { display: flex; gap: 6px; margin: 12px 0; }
+.stat-card { flex: 1; text-align: center; background: #fff; border-radius: 10px; padding: 10px 4px; }
+.stat-num { font-size: 24px; font-weight: 700; color: #1a237e; }
+.stat-num.gold { color: #e6a800; }
+.stat-num.purple { color: #7c4dff; }
+.stat-label { font-size: 11px; color: #666; margin-top: 2px; }
+.section { margin-bottom: 12px; }
+.section-title { font-size: 14px; font-weight: 600; color: #1565c0; margin-bottom: 8px; border-bottom: 1px solid rgba(211,188,142,0.25); padding-bottom: 4px; }
+
+/* 命座网格 - 每行3列 */
+.const-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+.const-item { background: #f5f7fa; border-radius: 8px; padding: 5px 10px; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+.const-name { color: #e65100; font-weight: 600; }
+.const-count { color: #666; font-size: 11px; }
+.const-label { color: #a78bfa; font-size: 11px; background: rgba(167,139,250,0.15); border-radius: 4px; padding: 0 5px; line-height: 18px; }
+.const-label.max { color: #ffd700; background: rgba(255,215,0,0.2); }
+.const-label.overflow { color: #ff5252; background: rgba(255,82,82,0.15); }
+
+/* 卡池分组块 */
+.pool-block { background: #fff; border-radius: 10px; margin-bottom: 6px; }
+.pool-header { padding: 6px 12px; background: #e3f2fd; font-size: 13px; font-weight: 600; color: #1565c0; display: flex; align-items: center; gap: 8px; }
+.pool-header .pull-num { font-size: 11px; color: #666; font-weight: 400; }
+.char-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 4px 8px; }
+.char-row { display: flex; align-items: center; padding: 3px 6px; border-radius: 6px; background: #f5f7fa; font-size: 12px; gap: 4px; }
+.char-star { color: #ffd700; font-size: 12px; min-width: 12px; }
+.char-name { color: #1a237e; font-weight: 600; min-width: 60px; }
+.char-pity { color: #666; font-size: 11px; }
+.char-type { color: #888; font-size: 10px; }
+.char-time { color: #777; font-size: 10px; margin-left: auto; }
+
+/* 保底 */
+.pity-row { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.pity-card { background: #fff; border-radius: 8px; padding: 8px 12px; flex: 1; min-width: 160px; }
+.pity-card .pool-name { font-size: 12px; color: #1565c0; font-weight: 500; }
+.pity-card .info-row { font-size: 11px; color: #555; margin: 2px 0; }
+.pity-card .info-row b { color: #1a237e; }
+.pity-bar-wrap { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.pity-bar-bg { flex: 1; height: 6px; background: #b0bec5; border-radius: 3px; overflow: hidden; }
+.pity-bar-fill { height: 100%; background: linear-gradient(90deg, #4caf50, #ff9800, #f44336); border-radius: 3px; }
+.pity-bar-label { font-size: 10px; color: #555; white-space: nowrap; }
+
+.empty { text-align: center; color: #777; padding: 16px; font-size: 12px; }
+
+
+.copyright { color: #78909c; text-shadow: none; }
+.copyright .version { color: #1565c0; }
+.notice-center { color: #666; text-shadow: none; }
+/* head-box 蓝白主题覆盖 */
+.head-box { color: #1a237e; }
+.head-box .label { color: #666; }
+.head-box .label span { color: #1565c0; }
+.head-box .title { text-shadow: 0 0 1px rgba(0,0,0,0.1); }
+.head-meta { color: #78909c; }
+</style>
+{{/block}}
+
+{{block 'main'}}
+<div class="info-box">
+  <div class="head-box">
+    <div class="title">{{gameName}} 抽卡统计</div>
+    <div class="label">UID: {{uid}}<span class="head-meta"> | {{renderTime}}</span></div>
+  </div>
+  <div class="source">数据来源: {{dataSource}}</div>
+</div>
+
+<div class="section">
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-num gold">{{fiveStarCount}}</div><div class="stat-label">五星</div></div>
+    <div class="stat-card"><div class="stat-num purple">{{fourStarCount}}</div><div class="stat-label">四星</div></div>
+    <div class="stat-card"><div class="stat-num">{{uniqueChars}}</div><div class="stat-label">不同角色</div></div>
+    <div class="stat-card"><div class="stat-num">{{totalRecords}}</div><div class="stat-label">总抽数</div></div>
+  </div>
+</div>
+
+{{if constRank && constRank.length > 0}}
+<div class="section">
+  <div class="section-title">{{fiveStarCount}}次五星 · {{uniqueChars}}个角色 · 命座详情</div>
+  <div class="const-grid">
+    {{each constRank cr}}
+    <div class="const-item">
+      <span class="const-name">{{cr.name}}</span>
+      <span class="const-count">×{{cr.count}}</span>
+      <span class="const-label {{cr.count > 6 ? 'overflow' : cr.count === 6 ? 'max' : ''}}">{{cr.label || '0命'}}</span>
+    </div>
+    {{/each}}
+  </div>
+</div>
+{{/if}}
+
+{{if poolGroups && poolGroups.length > 0}}
+<div class="section">
+  <div class="section-title">卡池详情</div>
+  {{each poolGroups grp}}
+  <div class="pool-block">
+    <div class="pool-header">{{grp.pool_name}} <span class="pull-num">{{grp.chars.length}}个五星</span></div>
+    <div class="char-grid">
+      {{each grp.chars ch}}
+      <div class="char-row">
+        <span class="char-star">★</span>
+        <span class="char-name">{{ch.name}}</span>
+        {{if ch.pity}}<span class="char-pity">{{ch.pity}}抽</span>{{/if}}
+        <span class="char-time">{{ch.time}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/each}}
+</div>
+{{/if}}
+
+{{if pityStats && pityStats.length > 0}}
+<div class="section">
+  <div class="section-title">当前水位</div>
+  <div class="pity-row">
+    {{each pityStats pity}}
+    {{if pity.current_pity > 0}}
+    <div class="pity-card">
+      <div class="pool-name">{{pity.pool_name}}</div>
+      <div class="info-row"><b>{{pity.current_pity}}</b><span style="font-weight:400;color:#78909c;"> / {{pity.max_pity}}</span></div>
+      <div class="info-row">均出金: <b>{{pity.avg_pity || '-'}}</b></div>
+      <div class="pity-bar-wrap">
+        <div class="pity-bar-bg"><div class="pity-bar-fill" style="width:{{pity.pity_percent}}%"></div></div>
+        <span class="pity-bar-label">{{pity.current_pity}}/{{pity.max_pity}}</span>
+      </div>
+    </div>
+    {{/if}}
+    {{/each}}
+  </div>
+</div>
+{{/if}}
+{{/block}}

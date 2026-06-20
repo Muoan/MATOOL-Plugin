@@ -1,0 +1,4 @@
+# MATOOL-Plugin - 默认配置
+renderScale: 100
+gacha:
+  maxRecords: 20

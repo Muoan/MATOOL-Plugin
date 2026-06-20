@@ -1,0 +1,61 @@
+{{extend defaultLayout}}
+
+{{block 'css'}}
+<style>
+body { width: 800px; background: #eef2f7; font-size: 16px; }
+.container { width: 780px; padding: 18px 10px 12px; }
+.source { text-align: right; font-size: 10px; color: #78909c; margin-top: 2px; }
+.section { margin-bottom: 10px; }
+.section-title { font-size: 14px; font-weight: 600; color: #1565c0; margin-bottom: 8px; border-bottom: 1px solid rgba(211,188,142,0.25); padding-bottom: 4px; }
+.stat-num { text-align: center; margin-bottom: 10px; font-size: 14px; color: #1a237e; }
+
+/* 五星卡片网格 */
+.five-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.five-card { display: flex; align-items: center; background: #fff; border-radius: 8px; padding: 6px 10px; gap: 6px; }
+.five-rank { color: #999; font-size: 11px; width: 24px; }
+.five-name { color: #e65100; font-weight: 600; font-size: 13px; min-width: 60px; }
+.five-type { color: #555; font-size: 11px; min-width: 30px; }
+.five-pool { color: #555; font-size: 11px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.five-time { color: #666; font-size: 11px; white-space: nowrap; }
+.empty { text-align: center; color: #888; padding: 24px; font-size: 13px; }
+
+
+.copyright { color: #78909c; text-shadow: none; }
+.copyright .version { color: #1565c0; }
+.notice-center { color: #666; text-shadow: none; }
+/* head-box 蓝白主题覆盖 */
+.head-box { color: #1a237e; }
+.head-box .label { color: #666; }
+.head-box .label span { color: #1565c0; }
+.head-box .title { text-shadow: 0 0 1px rgba(0,0,0,0.1); }
+.head-meta { color: #78909c; }
+</style>
+{{/block}}
+
+{{block 'main'}}
+<div class="info-box">
+  <div class="head-box">
+    <div class="title">{{gameName}} 五星列表</div>
+    <div class="label">UID: {{uid}}<span class="head-meta"> | 共 {{fiveStarList.length}} 个</span></div>
+  </div>
+  <div class="source">数据来源: {{dataSource}}</div>
+</div>
+
+<div class="section">
+  {{if fiveStarList && fiveStarList.length > 0}}
+  <div class="five-grid">
+  {{each fiveStarList fs idx}}
+  <div class="five-card">
+    <span class="five-rank">#{{idx+1}}</span>
+    <span class="five-name">{{fs.name}}</span>
+    <span class="five-type">{{fs.item_type || ''}}</span>
+    <span class="five-pool">{{fs.gacha_type_name || fs.gacha_type || ''}}</span>
+    <span class="five-time">{{fs.time ? fs.time.slice(0,10) : ''}}</span>
+  </div>
+  {{/each}}
+  </div>
+  {{else}}
+  <div class="empty">暂无五星记录</div>
+  {{/if}}
+</div>
+{{/block}}

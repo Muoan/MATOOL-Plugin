@@ -1,0 +1,21 @@
+{
+  "name": "MATOOL-Plugin",
+  "version": "1.0.1",
+  "description": "墨安游戏助手 - 原神/星穹铁道/绝区零 抽卡统计分析",
+  "author": "Muoan",
+  "type": "module",
+  "isPlugin": true,
+  "main": "index.js",
+  "homepage": "https://github.com/Muoan/MATOOL-Plugin",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Muoan/MATOOL-Plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Muoan/MATOOL-Plugin/issues"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0",
+    "lodash": "^4.17.21"
+  }
+}
