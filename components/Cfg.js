@@ -75,6 +75,10 @@ class Cfg {
       keys.push(key)
     }
 
+    // 确保存储结构是对象（YAML 解析异常可能导致是字符串）
+    if (typeof this._data['KEY']['MOANKEY'] !== 'object' || this._data['KEY']['MOANKEY'] === null) {
+      this._data['KEY']['MOANKEY'] = {}
+    }
     this._data['KEY']['MOANKEY']['keys'] = keys
     this._writeYaml(filePath, { keys })
   }
