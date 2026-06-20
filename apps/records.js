@@ -46,8 +46,8 @@ export class matRecords extends plugin {
       event: 'message',
       priority: 9999,
       rule: [
-        { reg: /^#?[*%]?(导出)\s*\d{8,10}\s*(记录|json)/i, fnc: 'exportCmd' },
-        { reg: /^#?[*%]?(导入)\s*\d{8,10}\s*(记录|json)/i, fnc: 'importStart' },
+        { reg: /^#?(?:[*%]|星铁|绝区零)?(导出)\s*\d{8,10}\s*(记录|json)/i, fnc: 'exportCmd' },
+        { reg: /^#?(?:[*%]|星铁|绝区零)?(导入)\s*\d{8,10}\s*(记录|json)/i, fnc: 'importStart' },
       ],
     })
   }
@@ -281,6 +281,9 @@ export class matRecords extends plugin {
   _uid() { const m = this.e.msg.match(/(\d{8,10})/); return m ? m[1] : '' }
   _gameBiz() {
     let m = this.e.msg.replace(/^#/, '')
+    // TRSS-Yunzai 把 *前缀 → #星铁，%前缀 → #绝区零
+    if (/^星铁/.test(m) || /^崩铁/.test(m)) return 'hkrpg_cn'
+    if (/^绝区/.test(m)) return 'nap_cn'
     const c = m.charAt(0)
     return symbolToGameBiz('*%'.includes(c) ? c : '#')
   }
