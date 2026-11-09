@@ -12,7 +12,7 @@ const Render = {
     if (!e?.runtime) {
       throw new Error('未找到 e.runtime，请升级至最新版 Yunzai')
     }
-    const BotName = Version.isTrss ? 'TRSS-Yunzai' : Version.isMiao ? 'Miao-Yunzai' : 'Yunzai-Bot'
+    const BotName = Version.isMangoCat ? 'MangoCat-Yunzai' : Version.isTrss ? 'TRSS-Yunzai' : Version.isMiao ? 'Miao-Yunzai' : 'Yunzai-Bot'
     const layoutPath = PluginPath + '/resources/common/layout/'
     return e.runtime.render('MATOOL-Plugin', path, params, {
       retType: cfg.retType,
