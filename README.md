@@ -1,3 +1,6 @@
+#源站重构中插件暂无法使用
+
+
 # 🎲 MATOOL-Plugin
 
 本插件基于墨安游戏助手（MoAn Game Assistant）开发
